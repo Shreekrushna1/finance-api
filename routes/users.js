@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-mongoose.connect('mongodb://localhost:27017/finance');
+mongoose.connect('mongodb+srv://krushnaproducts:Krushna11@cluster0.uvurvqw.mongodb.net/?retryWrites=true&w=majority');
 
 const userSchema = mongoose.Schema({
   firstName: String,
