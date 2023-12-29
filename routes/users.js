@@ -1,20 +1,39 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-mongoose.connect('mongodb+srv://krushnaproducts:Krushna11@cluster0.uvurvqw.mongodb.net/yourDatabaseName?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true });
+// mongoose.connect("mongodb+srv://shreekrushnashinde:Shreekrushna11@cluster0.wtyqvhl.mongodb.net/?retryWrites=true&w=majority");
 
-const db = mongoose.connection;
-
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-db.once('open', () => {
-  console.log('Connected to MongoDB successfully');
-});
-
-const userSchema = mongoose.Schema({
+const userSchema = new mongoose.Schema({
   firstName: String,
   lastName: String,
   email: String,
   password: String,
-  details: Array
+  details: [
+    {
+      wallet: [{ amount: Number,received_from: String,send_to:String,date:Date,sender_name: String, }],
+      cards: [
+        {
+          card_number: String,
+          card_holder: String,
+          card_cvv: String,
+          expiry_date: String,
+          card_amount: Number,
+          card_type: String,
+          transactions: [
+            {
+              date: String,
+              send_to: String,
+              amount: Number,
+              category: String,
+              received_from: String,
+              receiver_name: String,
+              payment_mode:String,
+              added:String
+            },
+          ],
+        },
+      ],
+    },
+  ],
 });
 
-module.exports = mongoose.model('users', userSchema);
+module.exports = mongoose.model("users", userSchema);
