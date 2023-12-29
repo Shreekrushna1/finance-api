@@ -7,6 +7,9 @@ const cardValidator = require('./card-validator');
 const jwt = require('jsonwebtoken');
 let otp;
 const secretKey = 'financeApp';
+const mongoose = require("mongoose");
+
+mongoose.connect("mongodb+srv://shreekrushnashinde:Shreekrushna11@cluster0.wtyqvhl.mongodb.net/?retryWrites=true&w=majority");
 
 router.post('/generate-otp', async (req, res) => {
     const { currentUserMail } = req.body;
@@ -180,7 +183,7 @@ router.post('/check-card-type', function (req, res) {
     const { cardNumber } = req.body;
     // const cardNumber = '4032036062670946';
     const cardType = cardValidator(cardNumber);
-    res.send(cardType);
+    res.status(200).json({cardType:cardType});
 });
 
 router.put('/update-profile', async function (req, res) {
@@ -217,9 +220,9 @@ router.put('/update-profile', async function (req, res) {
 
             res.status(200).json({ userDetails, token: token });
         } else {
-            userDetails = await userModel.findOne({ email: currentUserEmail });
-            if (!userDetails) {
-                return res.status(404).send('User not found');
+            userDetails = await userModel.findOne({ email: email });
+            if (userDetails) {
+                return res.status(404).json({message:'Email already exists'});
             }
             userDetails = await userModel.findOneAndUpdate(
                 { email: currentUserEmail },
@@ -270,11 +273,11 @@ router.post('/forgot-password', async (req, res) => {
         const { email } = req.body;
         const foundUser = await userModel.findOne({ email });
         if (!foundUser) {
-            res.status(401).json({
+            return res.status(401).json({
                 message: 'User Not Registered',
             });
         }
-        res.status(200).json({
+        return res.status(200).json({
             message: 'User Found',
             user_details: foundUser,
         });
@@ -298,5 +301,6 @@ router.put('/new-password', async (req, res) => {
         res.status(200).json({ message: 'Password Updated Successfully', updatedUser: updatedUser });
     } catch {}
 });
+
 
 module.exports = router;
