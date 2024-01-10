@@ -1,33 +1,38 @@
-var express = require('express');
+var express = require("express");
 var router = express.Router();
-const userModel = require('./users');
-const nodemailer = require('nodemailer');
-const otpGenerator = require('otp-generator');
-const cardValidator = require('./card-validator');
-const jwt = require('jsonwebtoken');
+const userModel = require("./users");
+const nodemailer = require("nodemailer");
+const otpGenerator = require("otp-generator");
+const cardValidator = require("./card-validator");
+const jwt = require("jsonwebtoken");
 let otp;
-const secretKey = 'financeApp';
-const mongoose = require("mongoose");
+const secretKey = "financeApp";
+// const mongoose = require("mongoose");
 
-mongoose.connect("mongodb+srv://shreekrushnashinde:Shreekrushna11@cluster0.wtyqvhl.mongodb.net/?retryWrites=true&w=majority");
+// mongoose.connect("mongodb+srv://shreekrushnashinde:Shreekrushna11@cluster0.wtyqvhl.mongodb.net/?retryWrites=true&w=majority");
 
-router.post('/generate-otp', async (req, res) => {
-    const { currentUserMail } = req.body;
-    if (currentUserMail !== undefined) {
-        var transport = nodemailer.createTransport({
-            host: 'mail.proexelancers.com',
-            port: 465,
-            auth: {
-                user: 'shreekrushna.shinde@proexelancers.com',
-                pass: 'Shreekrushna@123',
-            },
-        });
-        otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true });
-        var mailOptions = {
-            from: 'shreekrushna.shinde@proexelancers.com',
-            to: `${currentUserMail}`,
-            subject: 'OTP verification | Finance App',
-            html: `
+router.post("/generate-otp", async (req, res) => {
+  const { currentUserMail } = req.body;
+  if (currentUserMail !== undefined) {
+    var transport = nodemailer.createTransport({
+      host: "mail.proexelancers.com",
+      port: 465,
+      auth: {
+        user: "shreekrushna.shinde@proexelancers.com",
+        pass: "Shreekrushna@123",
+      },
+    });
+    otp = otpGenerator.generate(6, {
+      upperCaseAlphabets: false,
+      specialChars: false,
+      lowerCaseAlphabets: false,
+      digits: true,
+    });
+    var mailOptions = {
+      from: "shreekrushna.shinde@proexelancers.com",
+      to: `${currentUserMail}`,
+      subject: "OTP verification | Finance App",
+      html: `
             <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -99,207 +104,279 @@ router.post('/generate-otp', async (req, res) => {
 </body>
 </html>
             `,
-        };
-
-        transport.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                return console.log(error);
-            }
-            res.send(info);
-        });
-    } else {
-        res.status(400).json({ message: 'Internal Server Error! Please try again' });
-    }
-});
-
-router.post('/verify-otp', (req, res) => {
-    const { userOtp } = req.body;
-    if (userOtp == otp) {
-        res.status(200).json({ message: 'OTP Verified', OTP: true });
-    } else {
-        res.status(401).json({ message: 'Otp is incorrect' });
-    }
-});
-
-router.post('/register', async (req, res) => {
-    const { firstName, lastName, email, password } = req.body;
-    const newUser = await userModel.create({
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        password: password,
-    });
-    const payload = {
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        email: newUser.email,
-        password: newUser.password,
     };
-    const token = jwt.sign(payload, secretKey);
-    jwt.verify(token, secretKey, (err, decoded) => {
-        if (err) {
-            console.error('JWT verification failed:', err.message);
-        } else {
-            console.log('Decoded JWT:', decoded);
-        }
+
+    transport.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        return console.log(error);
+      }
+      res.send(info);
     });
-    res.status(200).json({ message: 'User Succesfully Registered', userData: newUser, token: token });
+  } else {
+    res
+      .status(400)
+      .json({ message: "Internal Server Error! Please try again" });
+  }
 });
 
-router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    const userDetails = await userModel.findOne({ email });
-    if (!userDetails) {
-        res.status(401).json({ message: 'User not exist' });
-        return;
+router.post("/verify-otp", (req, res) => {
+  const { userOtp } = req.body;
+  if (userOtp == otp) {
+    res.status(200).json({ message: "OTP Verified", OTP: true });
+  } else {
+    res.status(401).json({ message: "Otp is incorrect" });
+  }
+});
+
+router.post("/register", async (req, res) => {
+  const { firstName, lastName, email, password } = req.body;
+  const userAlreadyExists = await userModel.findOne({
+    email:email
+  });
+  if(userAlreadyExists){
+    return res.status(401).json({ message: "User with email is already exists",email:true });
+  }
+  const newUser = await userModel.create({
+    firstName: firstName,
+    lastName: lastName,
+    email: email,
+    password: password,
+  });
+  const payload = {
+    firstName: newUser.firstName,
+    lastName: newUser.lastName,
+    email: newUser.email,
+    password: newUser.password,
+  };
+  const token = jwt.sign(payload, secretKey);
+  jwt.verify(token, secretKey, (err, decoded) => {
+    if (err) {
+      console.error("JWT verification failed:", err.message);
+    } else {
+      console.log("Decoded JWT:", decoded);
     }
-    if (userDetails.password !== password) {
-        res.status(401).json({ message: 'Email/Password is invalid' });
-        return;
+  });
+  res.status(200).json({
+    message: "User Succesfully Registered",
+    userData: newUser,
+    token: token,
+  });
+});
+
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  const userDetails = await userModel.findOne({ email });
+  if (!userDetails) {
+    res.status(401).json({ message: "User not exist" });
+    return;
+  }
+  if (userDetails.password !== password) {
+    res.status(401).json({ message: "Email/Password is invalid" });
+    return;
+  }
+  const payload = {
+    firstName: userDetails.firstName,
+    lastName: userDetails.lastName,
+    email: userDetails.email,
+    password: userDetails.password,
+  };
+  const token = jwt.sign(payload, secretKey);
+  jwt.verify(token, secretKey, (err, decoded) => {
+    if (err) {
+      console.error("JWT verification failed:", err.message);
+    } else {
+      console.log("Decoded JWT:", decoded);
     }
-    const payload = {
+  });
+  res.status(200).json({ message: "User login success", token: token });
+});
+
+router.get("/financeUsers", async (req, res) => {
+  const allUsers = await userModel.find();
+  res.send(allUsers);
+});
+
+router.post("/check-card-type", function (req, res) {
+  const { cardNumber } = req.body;
+  // const cardNumber = '4032036062670946';
+  const cardType = cardValidator(cardNumber);
+  res.status(200).json({ cardType: cardType });
+});
+
+router.put("/update-profile", async function (req, res) {
+  const { firstName, lastName, email, currentUserEmail } = req.body;
+  let userDetails;
+
+  try {
+    if (email === currentUserEmail) {
+      userDetails = await userModel.findOneAndUpdate(
+        { email: email },
+        {
+          $set: {
+            firstName: firstName,
+            lastName: lastName,
+          },
+        },
+        { new: true }
+      );
+
+      if (!userDetails) {
+        return res.status(404).send("User not found");
+      }
+      const payload = {
         firstName: userDetails.firstName,
         lastName: userDetails.lastName,
         email: userDetails.email,
-        password: userDetails.password,
-    };
-    const token = jwt.sign(payload, secretKey);
-    jwt.verify(token, secretKey, (err, decoded) => {
+      };
+      const token = jwt.sign(payload, secretKey);
+      jwt.verify(token, secretKey, (err, decoded) => {
         if (err) {
-            console.error('JWT verification failed:', err.message);
-        } else {
-            console.log('Decoded JWT:', decoded);
+          console.error("JWT verification failed:", err.message);
         }
-    });
-    res.status(200).json({ message: 'User login success', token: token });
-});
+      });
 
-router.get('/financeUsers', async (req, res) => {
-    const allUsers = await userModel.find();
-    res.send(allUsers);
-});
-
-router.post('/check-card-type', function (req, res) {
-    const { cardNumber } = req.body;
-    // const cardNumber = '4032036062670946';
-    const cardType = cardValidator(cardNumber);
-    res.status(200).json({cardType:cardType});
-});
-
-router.put('/update-profile', async function (req, res) {
-    const { firstName, lastName, email, currentUserEmail } = req.body;
-    let userDetails;
-
-    try {
-        if (email === currentUserEmail) {
-            userDetails = await userModel.findOneAndUpdate(
-                { email: email },
-                {
-                    $set: {
-                        firstName: firstName,
-                        lastName: lastName,
-                    },
-                },
-                { new: true }
-            );
-
-            if (!userDetails) {
-                return res.status(404).send('User not found');
-            }
-            const payload = {
-                firstName: userDetails.firstName,
-                lastName: userDetails.lastName,
-                email: userDetails.email,
-            };
-            const token = jwt.sign(payload, secretKey);
-            jwt.verify(token, secretKey, (err, decoded) => {
-                if (err) {
-                    console.error('JWT verification failed:', err.message);
-                }
-            });
-
-            res.status(200).json({ userDetails, token: token });
-        } else {
-            userDetails = await userModel.findOne({ email: email });
-            if (userDetails) {
-                return res.status(404).json({message:'Email already exists'});
-            }
-            userDetails = await userModel.findOneAndUpdate(
-                { email: currentUserEmail },
-                {
-                    $set: {
-                        firstName: firstName,
-                        lastName: lastName,
-                        email: email,
-                    },
-                },
-                { new: true }
-            );
-            const payload = {
-                firstName: userDetails.firstName,
-                lastName: userDetails.lastName,
-                email: userDetails.email,
-            };
-            const token = jwt.sign(payload, secretKey);
-            jwt.verify(token, secretKey, (err, decoded) => {
-                if (err) {
-                    console.error('JWT verification failed:', err.message);
-                }
-            });
-            res.status(200).json({ userDetails, token: token });
+      res.status(200).json({ userDetails, token: token });
+    } else {
+      userDetails = await userModel.findOne({ email: email });
+      if (userDetails) {
+        return res.status(404).json({ message: "Email already exists" });
+      }
+      userDetails = await userModel.findOneAndUpdate(
+        { email: currentUserEmail },
+        {
+          $set: {
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+          },
+        },
+        { new: true }
+      );
+      const payload = {
+        firstName: userDetails.firstName,
+        lastName: userDetails.lastName,
+        email: userDetails.email,
+      };
+      const token = jwt.sign(payload, secretKey);
+      jwt.verify(token, secretKey, (err, decoded) => {
+        if (err) {
+          console.error("JWT verification failed:", err.message);
         }
-    } catch (err) {
-        console.error('Error updating profile:', err);
-        res.status(500).send('Internal Server Error');
+      });
+      res.status(200).json({ userDetails, token: token });
     }
+  } catch (err) {
+    console.error("Error updating profile:", err);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
-router.put('/update-password', async (req, res) => {
-    const { oldpassword, newpassword, email } = req.body;
-    const foundUser = await userModel.findOne({ email });
+router.put("/update-password", async (req, res) => {
+  const { oldpassword, newpassword, email } = req.body;
+  const foundUser = await userModel.findOne({ email });
+  if (!foundUser) {
+    return res.status(404).json({ message: "User Not Found" });
+  }
+  if (oldpassword !== foundUser.password) {
+    return res.status(404).json({ message: "Old Password Not Match" });
+  }
+  let userDetails;
+  userDetails = await userModel.findOneAndUpdate(
+    { email: email },
+    { $set: { password: newpassword } },
+    { new: true }
+  );
+  res.status(200).json({ userDetails, message: "Password Changed Success" });
+});
+
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    const foundUser = await userModel.findOne({ email: email });
     if (!foundUser) {
-        return res.status(404).json({ message: 'User Not Found' });
+      return res.status(401).json({
+        message: "User Not Registered",
+      });
     }
-    if (oldpassword !== foundUser.password) {
-        return res.status(404).json({ message: 'Old Password Not Match' });
-    }
-    let userDetails;
-    userDetails = await userModel.findOneAndUpdate({ email: email }, { $set: { password: newpassword } }, { new: true });
-    res.status(200).json({ userDetails, message: 'Password Changed Success' });
+    return res.status(200).json({
+      message: "User Found",
+      user_details: foundUser,
+    });
+  } catch {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 });
 
-router.post('/forgot-password', async (req, res) => {
-    try {
-        const { email } = req.body;
-        const foundUser = await userModel.findOne({ email });
-        if (!foundUser) {
-            return res.status(401).json({
-                message: 'User Not Registered',
-            });
-        }
-        return res.status(200).json({
-            message: 'User Found',
-            user_details: foundUser,
-        });
-    } catch {
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
+router.put("/new-password", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const updatedUser = await userModel.findOneAndUpdate(
+      { email: email },
+      {
+        $set: {
+          password: password,
+        },
+      },
+      { new: true }
+    );
+    res.status(200).json({
+      message: "Password Updated Successfully",
+      updatedUser: updatedUser,
+    });
+  } catch {}
 });
 
-router.put('/new-password', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const updatedUser = await userModel.findOneAndUpdate(
-            { email: email },
-            {
-                $set: {
-                    password: password,
-                },
-            },
-            { new: true }
-        );
-        res.status(200).json({ message: 'Password Updated Successfully', updatedUser: updatedUser });
-    } catch {}
+router.put("/add-amount-to-wallet", async (req, res) => {
+  const { email, amount,card_number } = req.body;
+  try {
+    const foundUser = await userModel.findOne({ email: email });
+    if (!foundUser) {
+      return res.status(401).json({
+        message: "User Not Registered",
+      });
+    }
+    const senderDetails = foundUser.details.find((detail) => detail.cards && detail.cards.length > 0);
+    const senderCard = senderDetails.cards.find((item) => item.card_number === card_number);
+    if (!senderCard) {
+      return res.status(404).json({ message: 'Card Not Found' });
+  }
+  const transaction = {
+      date: new Date(),
+      send_to: 'Added to wallet',
+      receiver_name: foundUser.firstName + ' ' + foundUser.lastName,
+      payment_mode: card_number,
+      amount: amount,
+  };
+  senderCard.transactions.push(transaction);
+  senderCard.card_amount -= amount;
+
+    let userDetails = foundUser.details.find(
+      (detail) => detail.wallet && detail.wallet.length > 0
+    );
+    if (!userDetails) {
+      foundUser.details.push({
+        wallet: [{ amount: 0 }],
+      });
+      let index = foundUser.details.findIndex(
+        (detail) => detail.wallet && detail.wallet.length > 0
+      );
+      userDetails = foundUser.details[index];
+    }
+    userDetails.wallet[0].amount += amount;
+    const addedAmount = {
+      amount: amount,
+      date: new Date(),
+      added: "Added to wallet",
+    };
+    userDetails.wallet.push(addedAmount);
+
+    await foundUser.save();
+
+    return res.status(200).json({ message: "Amount added to wallet via card" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
 });
 
 

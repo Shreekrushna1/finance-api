@@ -10,7 +10,8 @@ const userSchema = new mongoose.Schema({
   password: String,
   details: [
     {
-      wallet: [{ amount: Number,received_from: String,send_to:String,date:Date,sender_name: String, }],
+      wallet: [{ amount: Number,received_from: String,send_to:String,date:Date,sender_name: String,added:String,category_name:String,receiver_name:String,payment_mode:String, }],
+      category: [{ category_name: String, }],
       cards: [
         {
           card_number: String,
@@ -28,7 +29,7 @@ const userSchema = new mongoose.Schema({
               received_from: String,
               receiver_name: String,
               payment_mode:String,
-              added:String
+              added_to_card:String
             },
           ],
         },

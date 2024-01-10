@@ -8,6 +8,7 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var addCardRouter = require('./routes/add-new-card');
 var transaction = require('./routes/transaction');
+var add_category = require('./routes/add-category');
 var cors = require('cors');
 var app = express();
 
@@ -25,6 +26,7 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/addNewCard', addCardRouter);
 app.use('/transaction', transaction);
+app.use('/add_category', add_category);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

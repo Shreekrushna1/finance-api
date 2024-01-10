@@ -12,7 +12,13 @@ router.post("/add-new-card", async (req, res) => {
     currentUserEmail,
     cardType,
   } = req.body;
+  const cardExistsInAnyUser = await userModel.exists({
+    'details.cards.card_number': card_number,
+  });
 
+  if (cardExistsInAnyUser) {
+    return res.status(400).json({ message: "Card number already exists in another user's cards",cardAlreadyExits:true });
+  }
   try {
     const foundUser = await userModel.findOne({ email: currentUserEmail });
     if (!foundUser) {
@@ -69,7 +75,7 @@ router.get("/getAllCards", async (req, res) => {
   if (!existingDetails) {
     return res.status(200).json({ message: "User Cards Not Found" });
   }
-  res.status(200).json({ message: "Cards Found", cards: existingDetails });
+  res.status(200).json({ message: "Cards Found", cards: existingDetails || [] });
 });
 
 router.get('/getWallet', async (req,res) => {
@@ -79,7 +85,7 @@ router.get('/getWallet', async (req,res) => {
     return res.status(400).json({ message: "User Not Found" });
   }
   const existingDetails = foundUser.details.find(
-    (detail) => detail.wallet
+    (detail) => detail.wallet && detail.wallet.length > 0
   );
   if (!existingDetails) {
     return res.status(200).json({ message: "User Wallet Not Found" });
@@ -97,7 +103,7 @@ router.put("/add-amount", async (req, res) => {
     if (!foundUser.details || foundUser.details.length === 0) {
       return res.status(400).json({ message: "User has no details" });
     }
-    const userDetails = foundUser.details[0];
+    const userDetails = foundUser.details.find(res=> res.cards && res.cards.length);
     if (!userDetails.cards || userDetails.cards.length === 0) {
       return res.status(400).json({ message: "User has no cards" });
     }
@@ -111,7 +117,7 @@ router.put("/add-amount", async (req, res) => {
     const addedAmount = {
       amount: amount,
       date:new Date(),
-      added:'Added Amount'
+      added_to_card:'Added Amount'
     }
     userDetails.cards[cardIndex].transactions.push(addedAmount);
     await foundUser.save();
